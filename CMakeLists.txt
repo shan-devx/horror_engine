@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 project(horror_engine)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 
@@ -19,30 +21,41 @@ FetchContent_Declare(
     GIT_TAG docking
 )
 FetchContent_MakeAvailable(imgui)
-
 FetchContent_Declare(
-    rlImGui
+    rlimgui
     GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
     GIT_TAG main
 )
-FetchContent_MakeAvailable(rlImGui)
+FetchContent_MakeAvailable(rlimgui)
 
-add_executable(horror_engine 
-  # this should work
+set(RLIMGUI_SOURCES
+  ${rlimgui_SOURCE_DIR}/rlImGui.cpp
+
   ${imgui_SOURCE_DIR}/imgui.cpp
   ${imgui_SOURCE_DIR}/imgui_demo.cpp
   ${imgui_SOURCE_DIR}/imgui_draw.cpp
   ${imgui_SOURCE_DIR}/imgui_tables.cpp
   ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-  ${rlimgui_SOURCE_DIR}/rlImGui.cpp
+)
 
+add_executable(horror_engine 
+  ${RLIMGUI_SOURCES}
   src/gui.cpp
+  src/main.cpp
 )
 
-target_include_directories(horror_engine 
-  PRIVATE ${imgui_SOURCE_DIR}
-  PRIVATE ${rlImGui_SOURCE_DIR}
+target_include_directories(horror_engine PRIVATE
+    ${raylib_SOURCE_DIR}/src
+    ${imgui_SOURCE_DIR}
+    ${rlimgui_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
-target_link_libraries(horror_engine
-  PRIVATE raylib
+
+target_link_libraries(horror_engine PRIVATE
+  raylib
+)
+
+target_compile_definitions(horror_engine PRIVATE 
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS 
+  IMGUI_DISABLE_OBSOLETE_KEYIO
 )
