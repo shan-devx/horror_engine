@@ -2,11 +2,10 @@
 #include <imgui.h>
 #include <raylib.h>
 #include <imgui_impl_raylib.h>
-
-ImVec4 bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+#include "gui.h"
 
 int main(){
-  InitWindow(1360, 768, "Horror Engine");
+  InitWindow(1280, 720, "Horror Engine");
 
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
@@ -14,14 +13,21 @@ int main(){
   ImGui::StyleColorsDark();
   ImGui_ImplRaylib_Init();
     // change font
-  
+
+  ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = {0.1f, 0.1f, 0.1f, 0.1f};
+  SetExitKey(KEY_NULL);
+
+  asset_init();
+  viewport_init();
 
   while(!WindowShouldClose()){
     ImGui_ImplRaylib_ProcessEvents();
     ImGui_ImplRaylib_NewFrame();
     ImGui::NewFrame();
 
-
+    viewport_menu();
+    assets_menu();
+    properties_menu();
 
     ImGui::Render();
     BeginDrawing();
