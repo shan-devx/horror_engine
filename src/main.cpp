@@ -26,6 +26,7 @@ int main(){
     ImGui::NewFrame();
 
     viewport_menu();
+    world_menu();
     assets_menu();
     properties_menu();
 

@@ -8,6 +8,7 @@ void asset_init();
 void viewport_init();
 void viewport_menu();
 void assets_menu();
+void world_menu();
 void properties_menu();
 
 #endif

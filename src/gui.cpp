@@ -30,25 +30,40 @@ struct AssetList{
 };
 
 std::vector<Asset> world_obj;
-std::vector<AssetList> assets_list;
+std::vector<AssetList> assets_list; int selected_asset = -1;
 void asset_init(){
   assets_list.push_back({"Cube", 0,"default"});
 }
 
 void assets_menu(){
-  ImGui::SetNextWindowPos(ImVec2(0, GetScreenHeight()-200));
-  ImGui::SetNextWindowSize(ImVec2(GetScreenWidth(), 200));
+  ImGui::SetNextWindowPos(ImVec2(300, GetScreenHeight()-200));
+  ImGui::SetNextWindowSize(ImVec2(GetScreenWidth()-300, 200));
   ImGui::Begin("Assets", nullptr, window_flags);
 
-  for(AssetList &i : assets_list){
-    if(ImGui::Button(i.name.c_str())){
-      if(i.file_loc == "default"){
-        i.cnt++;
-        std::string label = i.name + std::to_string(i.cnt);
-        if(i.name == "Cube")
-          world_obj.push_back({label.c_str(), {0,0,0}, 
-              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f});
+    ImGui::TableNextColumn(); // assets list
+    for(AssetList &i : assets_list){
+      if(ImGui::Button(i.name.c_str())){
+        if(i.file_loc == "default"){
+          i.cnt++;
+          std::string label = i.name + std::to_string(i.cnt);
+          if(i.name == "Cube")
+            world_obj.push_back({label.c_str(), {0,0,0}, 
+                LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f});
+        }
       }
+    }   
+
+  ImGui::End();
+}
+
+void world_menu(){
+  ImGui::SetNextWindowPos(ImVec2(0, GetScreenHeight()-200));
+  ImGui::SetNextWindowSize(ImVec2(300, 200));
+  ImGui::Begin("World", nullptr, window_flags);
+
+  for(int i = 0; i < world_obj.size(); i++){
+    if(ImGui::Button(world_obj[i].name.c_str())){
+      selected_asset = i;
     }
   }
 
@@ -60,16 +75,27 @@ void properties_menu(){
   ImGui::SetNextWindowSize(ImVec2(300, GetScreenHeight()-200));
   ImGui::Begin("Properties", nullptr, window_flags);
 
-  for(Asset& i : world_obj){
-    if(ImGui::Button(("x##" + i.name).c_str())){
-      i.x_scale++;
-    }
-    if(ImGui::Button(("y##" + i.name).c_str())){
-      i.y_scale++;
-    }
-    if(ImGui::Button(("z##" +i.name).c_str())){
-      i.z_scale++;
-    }
+  if(selected_asset != -1){
+    Asset &a = world_obj[selected_asset];
+    ImGui::SeparatorText(a.name.c_str());
+    
+    ImGui::Text("Positon:");
+    ImGui::DragFloat("x-axis", &a.pos.x);
+    ImGui::DragFloat("y-axis", &a.pos.y);
+    ImGui::DragFloat("z-axis", &a.pos.z);
+      
+    ImGui::Text("Color:");
+    float col[4] = {(float)a.color.r/255, (float)a.color.g/255, (float)a.color.b/255, (float)a.color.a/255};
+    ImGui::ColorEdit4("RGBA", col);
+    a.color.r = col[0] * 255;
+    a.color.g = col[1] * 255;
+    a.color.b = col[2] * 255;
+    a.color.a = col[3] * 255;
+
+    ImGui::Text("scale:");
+    ImGui::DragFloat("x", &a.x_scale);
+    ImGui::DragFloat("y", &a.y_scale);
+    ImGui::DragFloat("z", &a.z_scale);
   }
 
   ImGui::End();
