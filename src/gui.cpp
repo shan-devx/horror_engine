@@ -2,81 +2,60 @@
 #include "raylib.h"
 #include <raymath.h>
 #include <cstdint>
-#include "gui.h"
+#include "gui.hpp"
 #include <rlImGui.h>
 #include <string>
 #include <vector>
 
-ImVec4 bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-
-ImGuiWindowFlags window_flags =
-ImGuiWindowFlags_NoResize |
-ImGuiWindowFlags_NoCollapse |
-ImGuiWindowFlags_NoMove;
-
-struct Asset{
-  std::string name;
-  Vector3 pos;
-  Model data;
-  Color color = WHITE; // no tint
-//  float scale;
-  float x_scale, y_scale, z_scale;
-};
-
-struct AssetList{
-  std::string name;
-  int cnt; // for naming only (not the actual count)
-  std::string file_loc;
-};
-
-std::vector<Asset> world_obj;
-std::vector<AssetList> assets_list; int selected_asset = -1;
-void asset_init(){
-  assets_list.push_back({"Cube", 0,"default"});
+void asset_init(EngineContext &e){
+  e.assets_list.push_back({"Cube", 0,"default"});
+  e.assets_list.push_back({"Terrain", 0, "default"});
 }
 
-void assets_menu(){
+void assets_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(300, GetScreenHeight()-200));
   ImGui::SetNextWindowSize(ImVec2(GetScreenWidth()-300, 200));
-  ImGui::Begin("Assets", nullptr, window_flags);
+  ImGui::Begin("Assets", nullptr, e.wflags);
 
-    ImGui::TableNextColumn(); // assets list
-    for(AssetList &i : assets_list){
-      if(ImGui::Button(i.name.c_str())){
-        if(i.file_loc == "default"){
-          i.cnt++;
-          std::string label = i.name + std::to_string(i.cnt);
-          if(i.name == "Cube")
-            world_obj.push_back({label.c_str(), {0,0,0}, 
-                LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f});
-        }
+  for(AssetList &i : e.assets_list){
+    if(ImGui::Button(i.name.c_str())){
+      if(i.file_loc == "default"){
+        i.cnt++;
+        std::string label = i.name + std::to_string(i.cnt);
+        if(i.name == "Cube")
+          e.world_obj.push_back({label.c_str(), {0,0,0}, 
+              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f});
+        if(i.name == "Terrain")
+          e.world_obj.push_back({label.c_str(), {0,0,0},
+              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 50.0f, 1.0f, 50.0f});
       }
-    }   
+    }
+  }   
 
   ImGui::End();
 }
 
-void world_menu(){
+void world_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(0, GetScreenHeight()-200));
   ImGui::SetNextWindowSize(ImVec2(300, 200));
-  ImGui::Begin("World", nullptr, window_flags);
+  ImGui::Begin("World", nullptr, e.wflags);
 
-  for(int i = 0; i < world_obj.size(); i++){
-    if(ImGui::Button(world_obj[i].name.c_str())){
-      selected_asset = i;
+  for(int i = 0; i < e.world_obj.size(); i++){
+    if(ImGui::Button(e.world_obj[i].name.c_str())){
+      e.selected_asset = i;
     }
   }
 
   ImGui::End();
 }
 
-void properties_menu(){
+void properties_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(0,0));
   ImGui::SetNextWindowSize(ImVec2(300, GetScreenHeight()-200));
-  ImGui::Begin("Properties", nullptr, window_flags);
+  ImGui::Begin("Properties", nullptr, e.wflags);
 
-  if(selected_asset != -1){
-    Asset &a = world_obj[selected_asset];
+  if(e.selected_asset != -1){
+    Asset &a = e.world_obj[e.selected_asset];
     ImGui::SeparatorText(a.name.c_str());
     
     ImGui::Text("Positon:");
@@ -117,24 +96,25 @@ void viewport_init(){
   camera.fovy = 45.0f;
   camera.projection = CAMERA_PERSPECTIVE;
 }
-void viewport_menu(){
+void viewport_menu(EngineContext &e){
   // raylib
   BeginTextureMode(vp_screen);
   ClearBackground(Color{
-    uint8_t(bgcolor.x * 255),
-    uint8_t(bgcolor.y * 255),
-    uint8_t(bgcolor.z * 255),
-    uint8_t(bgcolor.w * 255),
+    uint8_t(e.bgcolor.x * 255),
+    uint8_t(e.bgcolor.y * 255),
+    uint8_t(e.bgcolor.z * 255),
+    uint8_t(e.bgcolor.w * 255),
   });
   BeginMode3D(camera);
 
-  DrawGrid(10, 1);
+  DrawGrid(100, 1);
 
-  for(Asset& i : world_obj){
+  for(Asset& i : e.world_obj){
     Model model = i.data;
     model.transform = MatrixScale(i.x_scale, i.y_scale, i.z_scale);
 
     DrawModel(model, i.pos, 1, i.color);
+    DrawModelWires(model, i.pos, 1, BLACK);
   } 
 
   EndMode3D();
@@ -143,7 +123,7 @@ void viewport_menu(){
   // imgui
   ImGui::SetNextWindowPos(ImVec2(300, 0));
   ImGui::SetNextWindowSize(ImVec2(vp_width, vp_height));
-  ImGui::Begin("Viewport", nullptr,  window_flags);
+  ImGui::Begin("Viewport", nullptr,  e.wflags);
 
   if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) vp_focus = true;
   if((ImGui::IsMouseClicked(ImGuiMouseButton_Right) ||IsKeyPressed(KEY_ESCAPE)) && vp_focus){vp_focus = false; EnableCursor();}
