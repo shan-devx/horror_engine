@@ -9,7 +9,7 @@
 #define MAX_SPEED       20.0f
 #define CROUCH_SPEED     5.0f
 #define JUMP_FORCE      12.0f
-#define MAX_ACCEL      150.0f
+#define MAX_ACCEL      80.0f
 #define FRICTION         0.86f
 #define AIR_DRAG         0.98f
 #define CONTROL         15.0f

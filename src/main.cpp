@@ -34,6 +34,8 @@ int main(){
   asset_init(e);
   viewport_init();
 
+  SetTargetFPS(60);
+
   while(!WindowShouldClose()){
     ImGui_ImplRaylib_ProcessEvents();
     ImGui_ImplRaylib_NewFrame();
