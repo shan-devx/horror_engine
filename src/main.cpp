@@ -2,7 +2,8 @@
 #include <imgui.h>
 #include <raylib.h>
 #include <imgui_impl_raylib.h>
-#include "gui.hpp"
+#include "engine.hpp"
+#include "scripts/player.hpp"
 
 int main(){
   InitWindow(1280, 720, "Horror Engine");
@@ -25,9 +26,11 @@ int main(){
 
   std::vector<Asset> world_obj;
   std::vector<AssetList> assets_list; int selected_asset = -1;
-
   EngineContext e = {bgcolor, window_flags, world_obj, assets_list, selected_asset};
 
+  Player p={};
+
+  camera_init(e, p);
   asset_init(e);
   viewport_init();
 
@@ -36,7 +39,7 @@ int main(){
     ImGui_ImplRaylib_NewFrame();
     ImGui::NewFrame();
 
-    viewport_menu(e);
+    viewport_menu(e, p);
     world_menu(e);
     assets_menu(e);
     properties_menu(e);

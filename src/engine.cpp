@@ -1,8 +1,9 @@
 #include "imgui.h"
 #include "raylib.h"
-#include <raymath.h>
 #include <cstdint>
-#include "gui.hpp"
+#include <raymath.h>
+#include "engine.hpp"
+#include "scripts/player.hpp"
 #include <rlImGui.h>
 #include <string>
 #include <vector>
@@ -80,24 +81,33 @@ void properties_menu(EngineContext &e){
   ImGui::End();
 }
 
+void camera_init(EngineContext &e, Player &p){
+  Camera3D ecam;
+
+  ecam.position = {5.0f, 5.0f, 5.0f};
+  ecam.target = {0.0f, 0.0f, 0.0f};
+  ecam.up = {0.0f, 1.0f, 0.0f};
+  ecam.fovy = 45.0f;
+  ecam.projection = CAMERA_PERSPECTIVE;
+  e.camera.engine = ecam;
+
+  player_cam_init(e, p);
+
+  e.camera.selected = CAM_PLAYER;
+}
+
 int vp_width, vp_height;
 bool vp_focus;
 RenderTexture2D vp_screen;
-Camera3D camera;
 void viewport_init(){
   vp_width = GetScreenWidth() - 300; 
   vp_height = GetScreenHeight()-200;
   vp_screen = LoadRenderTexture(vp_width, vp_height);
   vp_focus = false;
-
-  camera.position = {5.0f, 5.0f, 5.0f};
-  camera.target = {0.0f, 0.0f, 0.0f};
-  camera.up = {0.0f, 1.0f, 0.0f};
-  camera.fovy = 45.0f;
-  camera.projection = CAMERA_PERSPECTIVE;
 }
-void viewport_menu(EngineContext &e){
+void viewport_menu(EngineContext &e, Player &p){
   // raylib
+/*
   BeginTextureMode(vp_screen);
   ClearBackground(Color{
     uint8_t(e.bgcolor.x * 255),
@@ -105,8 +115,58 @@ void viewport_menu(EngineContext &e){
     uint8_t(e.bgcolor.z * 255),
     uint8_t(e.bgcolor.w * 255),
   });
-  BeginMode3D(camera);
+  */
+  if(e.camera.selected == CAM_ENGINE){
+    BeginMode3D(e.camera.engine);
+  }
+  else if(e.camera.selected == CAM_PLAYER){
+    Vector2 mouseDelta = GetMouseDelta();
+    p.lookRotation.x -= mouseDelta.x * SENSITIVITY;
+    p.lookRotation.y += mouseDelta.y * SENSITIVITY;
 
+    char sideway = (IsKeyDown(KEY_D) - IsKeyDown(KEY_A));
+    char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
+    bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
+
+    UpdateBody(p, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
+    ImGui::Text("vel %.3f %.3f",
+    p.velocity.x,
+    p.velocity.z);
+
+ImGui::Text("pos %.3f %.3f",
+    p.position.x,
+    p.position.z);
+
+    float delta = GetFrameTime();
+    p.headLerp = Lerp(p.headLerp, (crouching ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
+    e.camera.player.position = {p.position.x,
+      p.position.y + (BOTTOM_HEIGHT + p.headLerp),
+      p.position.z,
+    };
+
+    if(p.isGrounded && ((forward != 0) || (sideway != 0))){
+      p.headTimer += delta*3.0f;
+      p.walkLerp = Lerp(p.walkLerp, 1.0f, 10.0f*delta);
+      e.camera.player.fovy = Lerp(e.camera.player.fovy, 55.0f, 5.0f*delta);
+    }
+    else{
+      p.walkLerp = Lerp(p.walkLerp, 0.0f, 10.0f*delta);
+      e.camera.player.fovy = Lerp(e.camera.player.fovy, 60.0f, 5.0f*delta);
+        }
+      p.lean.x = Lerp(p.lean.x, sideway*0.02f, 10.0f*delta);
+      p.lean.y = Lerp(p.lean.y, forward*0.015f, 10.0f*delta);
+
+      UpdateCameraFPS(e.camera.player, p);
+  }
+
+  BeginTextureMode(vp_screen);
+  ClearBackground(Color{
+    uint8_t(e.bgcolor.x * 255),
+    uint8_t(e.bgcolor.y * 255),
+    uint8_t(e.bgcolor.z * 255),
+    uint8_t(e.bgcolor.w * 255),
+  });
+  BeginMode3D(e.camera.player);
   DrawGrid(100, 1);
 
   for(Asset& i : e.world_obj){
@@ -128,7 +188,12 @@ void viewport_menu(EngineContext &e){
   if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) vp_focus = true;
   if((ImGui::IsMouseClicked(ImGuiMouseButton_Right) ||IsKeyPressed(KEY_ESCAPE)) && vp_focus){vp_focus = false; EnableCursor();}
   if(vp_focus){
-    UpdateCamera(&camera, CAMERA_FREE);
+    if(e.camera.selected == CAM_ENGINE){
+      UpdateCamera(&e.camera.engine, CAMERA_FREE);
+    }
+    else{
+      UpdateCamera(&e.camera.player, CAMERA_FIRST_PERSON);
+    }
     DisableCursor();
   }
 

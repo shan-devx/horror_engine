@@ -40,8 +40,9 @@ set(RLIMGUI_SOURCES
 
 add_executable(horror_engine 
   ${RLIMGUI_SOURCES}
-  src/gui.cpp
+  src/engine.cpp
   src/main.cpp
+  src/scripts/player.cpp
 )
 
 target_include_directories(horror_engine PRIVATE
@@ -49,6 +50,7 @@ target_include_directories(horror_engine PRIVATE
     ${imgui_SOURCE_DIR}
     ${rlimgui_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(horror_engine PRIVATE

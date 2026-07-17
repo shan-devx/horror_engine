@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 
+#define CAM_ENGINE 0
+#define CAM_PLAYER 1
+
  struct Asset{
   std::string name;
   Vector3 pos;
@@ -21,6 +24,12 @@ struct AssetList{
   std::string file_loc;
 };
 
+struct Cam{
+  Camera3D engine;
+  Camera3D player;
+  int selected;
+};
+
 struct EngineContext{
   ImVec4 bgcolor;
   
@@ -28,11 +37,16 @@ struct EngineContext{
 
   std::vector<Asset> world_obj;
   std::vector<AssetList> assets_list; int selected_asset;
+
+  Cam camera;
 };
 
+struct Player;
+
+void camera_init(EngineContext &e, Player &p);
 void asset_init(EngineContext &e);
 void viewport_init();
-void viewport_menu(EngineContext &e);
+void viewport_menu(EngineContext &e, Player &p);
 void assets_menu(EngineContext &e);
 void world_menu(EngineContext &e);
 void properties_menu(EngineContext &e);
