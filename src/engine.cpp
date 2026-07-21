@@ -24,11 +24,13 @@ void assets_menu(EngineContext &e){
         i.cnt++;
         std::string label = i.name + std::to_string(i.cnt);
         if(i.name == "Cube")
-          e.world_obj.push_back({label.c_str(), {0,0,0}, 
-              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f});
+          e.world_obj.push_back((Asset){label.c_str(), {0,0,0}, 
+              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f,
+              {1.0f, 1.0f, 1.0f}});
         if(i.name == "Terrain")
-          e.world_obj.push_back({label.c_str(), {0,0,0},
-              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 50.0f, 1.0f, 50.0f});
+          e.world_obj.push_back((Asset){label.c_str(), {0,-1,0},
+              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 50.0f, 1.0f, 50.0f,
+              {50.0f, 1.0f, 50.0f}});
       }
     }
   }   
@@ -40,6 +42,17 @@ void world_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(0, GetScreenHeight()-200));
   ImGui::SetNextWindowSize(ImVec2(300, 200));
   ImGui::Begin("World", nullptr, e.wflags);
+
+  if(e.camera.selected == CAM_ENGINE){
+    if(ImGui::Button("Play")){
+      e.camera.selected = CAM_PLAYER;
+    }
+  }
+  else{
+    if(ImGui::Button("Stop")){
+      e.camera.selected = CAM_ENGINE;
+    }
+  }
 
   for(int i = 0; i < e.world_obj.size(); i++){
     if(ImGui::Button(e.world_obj[i].name.c_str())){
@@ -93,7 +106,7 @@ void camera_init(EngineContext &e, Player &p){
 
   player_cam_init(e, p);
 
-  e.camera.selected = CAM_PLAYER;
+  e.camera.selected = CAM_ENGINE;
 }
 
 int vp_width, vp_height;
@@ -107,7 +120,6 @@ void viewport_init(){
 }
 void viewport_menu(EngineContext &e, Player &p){
   // raylib
-/*
   BeginTextureMode(vp_screen);
   ClearBackground(Color{
     uint8_t(e.bgcolor.x * 255),
@@ -115,11 +127,11 @@ void viewport_menu(EngineContext &e, Player &p){
     uint8_t(e.bgcolor.z * 255),
     uint8_t(e.bgcolor.w * 255),
   });
-  */
   if(e.camera.selected == CAM_ENGINE){
     BeginMode3D(e.camera.engine);
   }
   else if(e.camera.selected == CAM_PLAYER){
+    if(vp_focus){
     Vector2 mouseDelta = GetMouseDelta();
     p.lookRotation.x -= mouseDelta.x * SENSITIVITY;
     p.lookRotation.y += mouseDelta.y * SENSITIVITY;
@@ -128,14 +140,7 @@ void viewport_menu(EngineContext &e, Player &p){
     char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
     bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
 
-    UpdateBody(p, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
-    ImGui::Text("vel %.3f %.3f",
-    p.velocity.x,
-    p.velocity.z);
-
-ImGui::Text("pos %.3f %.3f",
-    p.position.x,
-    p.position.z);
+    UpdateBody(p, e, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
 
     float delta = GetFrameTime();
     p.headLerp = Lerp(p.headLerp, (crouching ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
@@ -152,21 +157,14 @@ ImGui::Text("pos %.3f %.3f",
     else{
       p.walkLerp = Lerp(p.walkLerp, 0.0f, 10.0f*delta);
       e.camera.player.fovy = Lerp(e.camera.player.fovy, 60.0f, 5.0f*delta);
-        }
-      p.lean.x = Lerp(p.lean.x, sideway*0.02f, 10.0f*delta);
-      p.lean.y = Lerp(p.lean.y, forward*0.015f, 10.0f*delta);
+    }
+    p.lean.x = Lerp(p.lean.x, sideway*0.02f, 10.0f*delta);
+    p.lean.y = Lerp(p.lean.y, forward*0.015f, 10.0f*delta);
 
-      UpdateCameraFPS(e.camera.player, p);
+    UpdateCameraFPS(e.camera.player, p);
+    }
+    BeginMode3D(e.camera.player);
   }
-
-  BeginTextureMode(vp_screen);
-  ClearBackground(Color{
-    uint8_t(e.bgcolor.x * 255),
-    uint8_t(e.bgcolor.y * 255),
-    uint8_t(e.bgcolor.z * 255),
-    uint8_t(e.bgcolor.w * 255),
-  });
-  BeginMode3D(e.camera.player);
   DrawGrid(100, 1);
 
   for(Asset& i : e.world_obj){

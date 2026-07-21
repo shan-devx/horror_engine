@@ -1,9 +1,7 @@
 #include "scripts/player.hpp"
-#include "imgui.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "engine.hpp"
-#include <string>
 
 void player_cam_init(EngineContext &e, Player &p){
 
@@ -21,6 +19,7 @@ void player_cam_init(EngineContext &e, Player &p){
   UpdateCameraFPS(pcam, p);
 }
 
+bool is_collision(Player &p, EngineContext &e);
 // raylib-src/core_3d_camera_fps eg
 void UpdateCameraFPS(Camera &camera, Player &p){
   const Vector3 up = { 0.0f, 1.0f, 0.0f };
@@ -61,10 +60,11 @@ void UpdateCameraFPS(Camera &camera, Player &p){
 }
 
 // raylib-src/core_3d_camera_fps eg
-void UpdateBody(Player &p, char side, char forward, bool jumpPressed, bool crouchHold){
+void UpdateBody(Player &p, EngineContext &e, char side, char forward, bool jumpPressed, bool crouchHold){
 
   float rot = p.lookRotation.x;
   Vector2 input = (Vector2){ (float)side, (float)-forward };
+  if ((side != 0) && (forward != 0)) input = Vector2Normalize(input);
 
   float delta = GetFrameTime();
 
@@ -101,13 +101,45 @@ void UpdateBody(Player &p, char side, char forward, bool jumpPressed, bool crouc
     p.velocity.z = hvel.z;
 
     p.position.x += p.velocity.x*delta;
-    p.position.y += p.velocity.y*delta;
-    p.position.z += p.velocity.z*delta;
+    if(is_collision(p, e)){ p.position.x -= p.velocity.x*delta; p.velocity.x = 0;}
 
-    // Fancy collision system against the floor
-    if (p.position.y <= 0.0f){
-        p.position.y = 0.0f;
-        p.velocity.y = 0.0f;
-        p.isGrounded = true; // Enable jumping
+    p.position.y += p.velocity.y*delta;
+    if(is_collision(p, e)){
+      p.position.y-=p.velocity.y*delta;
+      if(p.velocity.y < 0){
+        p.isGrounded = true;
+      }
+      p.velocity.y = 0;
     }
+    else{
+      p.isGrounded = false;
+    }
+
+    p.position.z += p.velocity.z*delta;
+    if(is_collision(p, e)){ p.position.z -= p.velocity.z*delta; p.velocity.z = 0;}
+}
+
+bool is_collision(Player &p, EngineContext &e){
+    BoundingBox player_box = {(Vector3){p.position.x-0.5f,
+                                        p.position.y,
+                                        p.position.z-0.5f,},
+                              (Vector3){p.position.x+0.5f,
+                                        p.position.y + player_body + p.headLerp,
+                                        p.position.z+0.5f}
+                              };
+
+    for(Asset &i : e.world_obj){
+      BoundingBox obj_box = {(Vector3){i.pos.x - i.box_size.x/2,
+                                       i.pos.y - i.box_size.y/2,
+                                       i.pos.z - i.box_size.z/2,},
+                             (Vector3){i.pos.x + i.box_size.x/2,
+                                       i.pos.y + i.box_size.y/2,
+                                       i.pos.z + i.box_size.z/2,}
+                            };
+      if(CheckCollisionBoxes(player_box, obj_box)){
+        return true;
+      }
+    }
+
+    return false;
 }

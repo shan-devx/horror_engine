@@ -14,8 +14,10 @@
   Vector3 pos;
   Model data;
   Color color = WHITE; // no tint
-//  float scale;
   float x_scale, y_scale, z_scale;
+
+  Vector3 box_size; // for now only boxes for collision
+  bool collision = true;
 };
 
 struct AssetList{

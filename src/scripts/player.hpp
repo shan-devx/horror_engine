@@ -10,8 +10,8 @@
 #define CROUCH_SPEED     5.0f
 #define JUMP_FORCE      12.0f
 #define MAX_ACCEL      80.0f
-#define FRICTION         0.86f
-#define AIR_DRAG         0.98f
+#define FRICTION         0.76f
+#define AIR_DRAG         0.70f
 #define CONTROL         15.0f
 #define CROUCH_HEIGHT    0.0f
 #define STAND_HEIGHT     1.0f
@@ -38,6 +38,6 @@ struct EngineContext;
 void player_cam_init(EngineContext &e, Player &p);
 
 void UpdateCameraFPS(Camera &camera, Player &p);
-void UpdateBody(Player &p, char side, char forward, bool jumpPressed, bool crouchHold);
+void UpdateBody(Player &p, EngineContext &e, char side, char forward, bool jumpPressed, bool crouchHold);
 
 #endif
