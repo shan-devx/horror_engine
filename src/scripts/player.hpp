@@ -36,6 +36,7 @@ struct Player{
 struct EngineContext;
 
 void player_cam_init(EngineContext &e, Player &p);
+void player_cam(Player &p, EngineContext &e);
 
 void UpdateCameraFPS(Camera &camera, Player &p);
 void UpdateBody(Player &p, EngineContext &e, char side, char forward, bool jumpPressed, bool crouchHold);

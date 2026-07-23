@@ -48,6 +48,7 @@ add_executable(horror_engine
   ${RLIMGUI_SOURCES}
   src/engine.cpp
   src/main.cpp
+  src/persistence.cpp
   src/scripts/player.cpp
 )
 

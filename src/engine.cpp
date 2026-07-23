@@ -7,6 +7,15 @@
 #include <rlImGui.h>
 #include <string>
 #include <vector>
+#include <persistence.hpp>
+#include <engine_struct.hpp>
+
+ImGuiWindowFlags window_flags =
+  ImGuiWindowFlags_NoResize |
+  ImGuiWindowFlags_NoCollapse |
+  ImGuiWindowFlags_NoMove;
+
+ImVec4 bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
 
 void asset_init(EngineContext &e){
   e.assets_list.push_back({"Cube", 0,"default"});
@@ -16,7 +25,7 @@ void asset_init(EngineContext &e){
 void assets_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(300, GetScreenHeight()-200));
   ImGui::SetNextWindowSize(ImVec2(GetScreenWidth()-300, 200));
-  ImGui::Begin("Assets", nullptr, e.wflags);
+  ImGui::Begin("Assets", nullptr, window_flags);
 
   for(AssetList &i : e.assets_list){
     if(ImGui::Button(i.name.c_str())){
@@ -25,12 +34,13 @@ void assets_menu(EngineContext &e){
         std::string label = i.name + std::to_string(i.cnt);
         if(i.name == "Cube")
           e.world_obj.push_back((Asset){label.c_str(), {0,0,0}, 
-              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 1.0f, 1.0f, 1.0f,
+              WHITE, 1.0f, 1.0f, 1.0f,
               {1.0f, 1.0f, 1.0f}});
         if(i.name == "Terrain")
           e.world_obj.push_back((Asset){label.c_str(), {0,-1,0},
-              LoadModelFromMesh(GenMeshCube(1, 1, 1)), WHITE, 50.0f, 1.0f, 50.0f,
+              WHITE, 50.0f, 1.0f, 50.0f,
               {50.0f, 1.0f, 50.0f}});
+        load_asset_model(e.world_obj);
       }
     }
   }   
@@ -41,7 +51,7 @@ void assets_menu(EngineContext &e){
 void world_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(0, GetScreenHeight()-200));
   ImGui::SetNextWindowSize(ImVec2(300, 200));
-  ImGui::Begin("World", nullptr, e.wflags);
+  ImGui::Begin("World", nullptr, window_flags);
 
   if(e.camera.selected == CAM_ENGINE){
     if(ImGui::Button("Play")){
@@ -52,6 +62,10 @@ void world_menu(EngineContext &e){
     if(ImGui::Button("Stop")){
       e.camera.selected = CAM_ENGINE;
     }
+  }
+  ImGui::SameLine();
+  if(ImGui::Button("save")){
+    save(e.world_obj);
   }
 
   for(int i = 0; i < e.world_obj.size(); i++){
@@ -66,7 +80,7 @@ void world_menu(EngineContext &e){
 void properties_menu(EngineContext &e){
   ImGui::SetNextWindowPos(ImVec2(0,0));
   ImGui::SetNextWindowSize(ImVec2(300, GetScreenHeight()-200));
-  ImGui::Begin("Properties", nullptr, e.wflags);
+  ImGui::Begin("Properties", nullptr, window_flags);
 
   if(e.selected_asset != -1){
     Asset &a = e.world_obj[e.selected_asset];
@@ -89,6 +103,13 @@ void properties_menu(EngineContext &e){
     ImGui::DragFloat("x", &a.x_scale);
     ImGui::DragFloat("y", &a.y_scale);
     ImGui::DragFloat("z", &a.z_scale);
+
+    ImGui::Checkbox("Collision", &a.collision);
+
+    if(ImGui::Button("Delete")){
+      e.world_obj.erase(e.world_obj.begin() + e.selected_asset);
+      e.selected_asset = -1;
+    }
   }
 
   ImGui::End();
@@ -122,47 +143,16 @@ void viewport_menu(EngineContext &e, Player &p){
   // raylib
   BeginTextureMode(vp_screen);
   ClearBackground(Color{
-    uint8_t(e.bgcolor.x * 255),
-    uint8_t(e.bgcolor.y * 255),
-    uint8_t(e.bgcolor.z * 255),
-    uint8_t(e.bgcolor.w * 255),
+    uint8_t(bgcolor.x * 255),
+    uint8_t(bgcolor.y * 255),
+    uint8_t(bgcolor.z * 255),
+    uint8_t(bgcolor.w * 255),
   });
   if(e.camera.selected == CAM_ENGINE){
     BeginMode3D(e.camera.engine);
   }
   else if(e.camera.selected == CAM_PLAYER){
-    if(vp_focus){
-    Vector2 mouseDelta = GetMouseDelta();
-    p.lookRotation.x -= mouseDelta.x * SENSITIVITY;
-    p.lookRotation.y += mouseDelta.y * SENSITIVITY;
-
-    char sideway = (IsKeyDown(KEY_D) - IsKeyDown(KEY_A));
-    char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
-    bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
-
-    UpdateBody(p, e, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
-
-    float delta = GetFrameTime();
-    p.headLerp = Lerp(p.headLerp, (crouching ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
-    e.camera.player.position = {p.position.x,
-      p.position.y + (BOTTOM_HEIGHT + p.headLerp),
-      p.position.z,
-    };
-
-    if(p.isGrounded && ((forward != 0) || (sideway != 0))){
-      p.headTimer += delta*3.0f;
-      p.walkLerp = Lerp(p.walkLerp, 1.0f, 10.0f*delta);
-      e.camera.player.fovy = Lerp(e.camera.player.fovy, 55.0f, 5.0f*delta);
-    }
-    else{
-      p.walkLerp = Lerp(p.walkLerp, 0.0f, 10.0f*delta);
-      e.camera.player.fovy = Lerp(e.camera.player.fovy, 60.0f, 5.0f*delta);
-    }
-    p.lean.x = Lerp(p.lean.x, sideway*0.02f, 10.0f*delta);
-    p.lean.y = Lerp(p.lean.y, forward*0.015f, 10.0f*delta);
-
-    UpdateCameraFPS(e.camera.player, p);
-    }
+    if(vp_focus) player_cam(p, e);
     BeginMode3D(e.camera.player);
   }
   DrawGrid(100, 1);
@@ -181,7 +171,7 @@ void viewport_menu(EngineContext &e, Player &p){
   // imgui
   ImGui::SetNextWindowPos(ImVec2(300, 0));
   ImGui::SetNextWindowSize(ImVec2(vp_width, vp_height));
-  ImGui::Begin("Viewport", nullptr,  e.wflags);
+  ImGui::Begin("Viewport", nullptr,  window_flags);
 
   if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) vp_focus = true;
   if((ImGui::IsMouseClicked(ImGuiMouseButton_Right) ||IsKeyPressed(KEY_ESCAPE)) && vp_focus){vp_focus = false; EnableCursor();}

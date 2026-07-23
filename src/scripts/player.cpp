@@ -1,22 +1,49 @@
 #include "scripts/player.hpp"
 #include "raylib.h"
 #include "raymath.h"
-#include "engine.hpp"
+#include "engine_struct.hpp"
 
 void player_cam_init(EngineContext &e, Player &p){
-
-  Camera3D pcam = {};
-
-  pcam.position = {p.position.x, 
+  e.camera.player.position = {p.position.x, 
     p.position.y + player_body + p.headLerp, p.position.z};
-//  pcam.position = {0, 3, 0};
-  pcam.target = {1.0f, 2.0f, 1.0f};
-  pcam.up = {0.0f, 1.0f, 0.0f};
-  pcam.fovy = 60.0f;
-  pcam.projection = CAMERA_PERSPECTIVE;
-  e.camera.player = pcam;
+  e.camera.player.target = {1.0f, 2.0f, 1.0f};
+  e.camera.player.up = {0.0f, 1.0f, 0.0f};
+  e.camera.player.fovy = 45.0f;
+  e.camera.player.projection = CAMERA_PERSPECTIVE;
+  UpdateCameraFPS(e.camera.player, p);
+}
 
-  UpdateCameraFPS(pcam, p);
+void player_cam(Player &p, EngineContext &e){
+      Vector2 mouseDelta = GetMouseDelta();
+      p.lookRotation.x -= mouseDelta.x * SENSITIVITY;
+      p.lookRotation.y += mouseDelta.y * SENSITIVITY;
+
+      char sideway = (IsKeyDown(KEY_D) - IsKeyDown(KEY_A));
+      char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
+      bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
+
+      UpdateBody(p, e, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
+
+      float delta = GetFrameTime();
+      p.headLerp = Lerp(p.headLerp, (crouching ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
+      e.camera.player.position = {p.position.x,
+                                  p.position.y + (BOTTOM_HEIGHT + p.headLerp),
+                                  p.position.z,
+                                  };
+
+      if(p.isGrounded && ((forward != 0) || (sideway != 0))){
+        p.headTimer += delta*3.0f;
+        p.walkLerp = Lerp(p.walkLerp, 1.0f, 10.0f*delta);
+        e.camera.player.fovy = Lerp(e.camera.player.fovy, 55.0f, 5.0f*delta);
+      }
+      else{
+        p.walkLerp = Lerp(p.walkLerp, 0.0f, 10.0f*delta);
+        e.camera.player.fovy = Lerp(e.camera.player.fovy, 60.0f, 5.0f*delta);
+      }
+      p.lean.x = Lerp(p.lean.x, sideway*0.02f, 10.0f*delta);
+      p.lean.y = Lerp(p.lean.y, forward*0.015f, 10.0f*delta);
+
+      UpdateCameraFPS(e.camera.player, p);
 }
 
 bool is_collision(Player &p, EngineContext &e);
@@ -129,6 +156,7 @@ bool is_collision(Player &p, EngineContext &e){
                               };
 
     for(Asset &i : e.world_obj){
+      if(!i.collision) continue;
       BoundingBox obj_box = {(Vector3){i.pos.x - i.box_size.x/2,
                                        i.pos.y - i.box_size.y/2,
                                        i.pos.z - i.box_size.z/2,},
